@@ -1,0 +1,113 @@
+package tests
+
+import (
+	"fmt"
+	"testing"
+
+	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+
+	"github.com/terraform-providers/terraform-provider-azuread/azuread/internal/acceptance"
+)
+
+func TestAccAzureADServicePrincipalDataSource_byApplicationId(t *testing.T) {
+	dataSourceName := "data.azuread_service_principal.tests"
+	id := uuid.New().String()
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { acceptance.PreCheck(t) },
+		Providers:    acceptance.SupportedProviders,
+		CheckDestroy: testCheckADServicePrincipalDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAzureADServicePrincipalDataSource_byApplicationId(id),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckADServicePrincipalExists(dataSourceName),
+					resource.TestCheckResourceAttrSet(dataSourceName, "application_id"),
+					resource.TestCheckResourceAttrSet(dataSourceName, "object_id"),
+					resource.TestCheckResourceAttrSet(dataSourceName, "display_name"),
+					resource.TestCheckResourceAttr(dataSourceName, "app_roles.#", "0"),
+					resource.TestCheckResourceAttr(dataSourceName, "oauth2_permissions.#", "1"),
+					resource.TestCheckResourceAttr(dataSourceName, "oauth2_permissions.0.admin_consent_description", fmt.Sprintf("Allow the application to access %s on behalf of the signed-in user.", fmt.Sprintf("acctestApp-%s", id))),
+				),
+			},
+		},
+	})
+}
+
+func TestAccAzureADServicePrincipalDataSource_byDisplayName(t *testing.T) {
+	dataSourceName := "data.azuread_service_principal.tests"
+	id := uuid.New().String()
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { acceptance.PreCheck(t) },
+		Providers:    acceptance.SupportedProviders,
+		CheckDestroy: testCheckADServicePrincipalDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAzureADServicePrincipalDataSource_byDisplayName(id),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckADServicePrincipalExists(dataSourceName),
+					resource.TestCheckResourceAttrSet(dataSourceName, "application_id"),
+					resource.TestCheckResourceAttrSet(dataSourceName, "object_id"),
+					resource.TestCheckResourceAttrSet(dataSourceName, "display_name"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccAzureADServicePrincipalDataSource_byObjectId(t *testing.T) {
+	dataSourceName := "data.azuread_service_principal.tests"
+	id := uuid.New().String()
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { acceptance.PreCheck(t) },
+		Providers:    acceptance.SupportedProviders,
+		CheckDestroy: testCheckADServicePrincipalDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAzureADServicePrincipalDataSource_byObjectId(id),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckADServicePrincipalExists(dataSourceName),
+					resource.TestCheckResourceAttrSet(dataSourceName, "application_id"),
+					resource.TestCheckResourceAttrSet(dataSourceName, "object_id"),
+					resource.TestCheckResourceAttrSet(dataSourceName, "display_name"),
+				),
+			},
+		},
+	})
+}
+
+func testAccAzureADServicePrincipalDataSource_byApplicationId(id string) string {
+	template := testAccADServicePrincipal_basic(id)
+	return fmt.Sprintf(`
+%s
+
+data "azuread_service_principal" "tests" {
+  application_id = azuread_service_principal.tests.application_id
+}
+`, template)
+}
+
+func testAccAzureADServicePrincipalDataSource_byDisplayName(id string) string {
+	template := testAccADServicePrincipal_basic(id)
+	return fmt.Sprintf(`
+%s
+
+data "azuread_service_principal" "tests" {
+  display_name = azuread_service_principal.tests.display_name
+}
+`, template)
+}
+
+func testAccAzureADServicePrincipalDataSource_byObjectId(id string) string {
+	template := testAccADServicePrincipal_basic(id)
+	return fmt.Sprintf(`
+%s
+
+data "azuread_service_principal" "tests" {
+  object_id = azuread_service_principal.tests.object_id
+}
+`, template)
+}
