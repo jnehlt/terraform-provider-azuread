@@ -142,6 +142,7 @@ func TestAccAzureADApplication_update(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "identifier_uris.#", "0"),
 					resource.TestCheckResourceAttr(resourceName, "reply_urls.#", "0"),
 					resource.TestCheckResourceAttr(resourceName, "optional_claims.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "oauth2_permissions.#", "0"),
 				),
 			},
 			{
@@ -248,17 +249,35 @@ func TestAccAzureADApplication_appRoles(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testCheckADApplicationExists(resourceName),
 					resource.TestCheckResourceAttr(resourceName, "app_role.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "app_role.3282540397.allowed_member_types.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "app_role.3282540397.allowed_member_types.2550101162", "Application"),
-					resource.TestCheckResourceAttr(resourceName, "app_role.3282540397.allowed_member_types.2906997583", "User"),
-					resource.TestCheckResourceAttr(resourceName, "app_role.3282540397.description", "Admins can manage roles and perform all task actions"),
-					resource.TestCheckResourceAttr(resourceName, "app_role.3282540397.display_name", "Admin"),
-					resource.TestCheckResourceAttr(resourceName, "app_role.3282540397.is_enabled", "true"),
-					resource.TestCheckResourceAttr(resourceName, "app_role.3282540397.value", "Admin"),
 				),
 			},
 			{
 				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccAzureADApplication_appRolesManualID(t *testing.T) {
+	rn := "azuread_application.test"
+	ri := tf.AccRandTimeInt()
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { acceptance.PreCheck(t) },
+		Providers:    acceptance.SupportedProviders,
+		CheckDestroy: testCheckADApplicationDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccADApplication_appRolesManualID(ri),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckADApplicationExists(rn),
+					resource.TestCheckResourceAttr(rn, "app_role.#", "1"),
+				),
+			},
+			{
+				ResourceName:      rn,
 				ImportState:       true,
 				ImportStateVerify: true,
 			},
@@ -586,6 +605,32 @@ func TestAccAzureADApplication_oauth2PermissionsUpdate(t *testing.T) {
 	})
 }
 
+func TestAccAzureADApplication_oauth2PermissionsManualID(t *testing.T) {
+	resourceName := "azuread_application.tests"
+	ri := tf.AccRandTimeInt()
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:     func() { acceptance.PreCheck(t) },
+		Providers:    acceptance.SupportedProviders,
+		CheckDestroy: testCheckADApplicationDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccADApplication_oauth2PermissionsManualID(ri),
+				Check: resource.ComposeTestCheckFunc(
+					testCheckADApplicationExists(resourceName),
+					resource.TestCheckResourceAttr(resourceName, "name", fmt.Sprintf("acctest-APP-%[1]d", ri)),
+					resource.TestCheckResourceAttr(resourceName, "oauth2_permissions.#", "1"),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 func TestAccAzureADApplication_preventDuplicateNames(t *testing.T) {
 	ri := tf.AccRandTimeInt()
 
@@ -677,6 +722,7 @@ func testAccADApplication_basicEmpty(ri int) string {
 resource "azuread_application" "tests" {
   name                    = "acctest-APP-%[1]d"
   identifier_uris         = []
+  oauth2_permissions      = []
   reply_urls              = []
   group_membership_claims = "None"
 }
@@ -845,6 +891,22 @@ resource "azuread_application" "tests" {
 `, ri)
 }
 
+func testAccADApplication_appRolesManualID(ri int) string {
+	return fmt.Sprintf(`
+resource "azuread_application" "test" {
+  name = "acctest-APP-%[1]d"
+  app_role {
+    allowed_member_types = ["User"]
+    description          = "Admins can manage roles and perform all task actions"
+    display_name         = "Admin"
+    id                   = "10000000-2000-3000-4000-500000000000"
+    is_enabled           = true
+    value                = "Admin"
+  }
+}
+`, ri)
+}
+
 func testAccADApplication_appRolesNoValue(ri int) string {
 	return fmt.Sprintf(`
 resource "azuread_application" "tests" {
@@ -890,14 +952,6 @@ resource "azuread_application" "tests" {
   name = "acctest-APP-%[1]d"
 
   oauth2_permissions {
-    admin_consent_description  = "Administer the application"
-    admin_consent_display_name = "Administer"
-    is_enabled                 = true
-    type                       = "Admin"
-    value                      = "administer"
-  }
-
-  oauth2_permissions {
     admin_consent_description  = "Allow the application to access acctest-APP-%[1]d on behalf of the signed-in user."
     admin_consent_display_name = "Access acctest-APP-%[1]d"
     is_enabled                 = true
@@ -905,6 +959,31 @@ resource "azuread_application" "tests" {
     user_consent_description   = "Allow the application to access acctest-APP-%[1]d on your behalf."
     user_consent_display_name  = "Access acctest-APP-%[1]d"
     value                      = "user_impersonation"
+  }
+
+  oauth2_permissions {
+    admin_consent_description  = "Administer the application"
+    admin_consent_display_name = "Administer"
+    is_enabled                 = true
+    type                       = "Admin"
+    value                      = "administer"
+  }
+}
+`, ri)
+}
+
+func testAccADApplication_oauth2PermissionsManualID(ri int) string {
+	return fmt.Sprintf(`
+resource "azuread_application" "tests" {
+  name = "acctest-APP-%[1]d"
+
+  oauth2_permissions {
+    admin_consent_description  = "Administer the application"
+    admin_consent_display_name = "Administer"
+    id                         = "10000000-2000-3000-4000-500000000000"
+    is_enabled                 = true
+    type                       = "Admin"
+    value                      = "administer"
   }
 }
 `, ri)

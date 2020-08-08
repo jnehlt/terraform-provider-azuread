@@ -107,13 +107,15 @@ func ResourceApplication() *schema.Resource {
 			},
 
 			"app_role": {
-				Type:     schema.TypeSet,
+				Type:     schema.TypeList,
 				Optional: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"id": {
-							Type:     schema.TypeString,
-							Computed: true,
+							Type:         schema.TypeString,
+							Optional:     true,
+							Computed:     true,
+							ValidateFunc: validate.UUID,
 						},
 
 						"allowed_member_types": {
@@ -150,6 +152,7 @@ func ResourceApplication() *schema.Resource {
 						"value": {
 							Type:     schema.TypeString,
 							Optional: true,
+							Computed: true,
 						},
 					},
 				},
@@ -227,7 +230,7 @@ func ResourceApplication() *schema.Resource {
 			},
 
 			"oauth2_permissions": {
-				Type:       schema.TypeSet,
+				Type:       schema.TypeList,
 				Optional:   true,
 				Computed:   true,
 				ConfigMode: schema.SchemaConfigModeAttr,
@@ -249,6 +252,7 @@ func ResourceApplication() *schema.Resource {
 
 						"id": {
 							Type:     schema.TypeString,
+							Optional: true,
 							Computed: true,
 						},
 
@@ -286,6 +290,7 @@ func ResourceApplication() *schema.Resource {
 					},
 				},
 			},
+
 			"prevent_duplicate_names": {
 				Type:     schema.TypeBool,
 				Optional: true,
@@ -833,7 +838,7 @@ func flattenADApplicationOptionalClaimsList(in *[]graphrbac.OptionalClaim) []int
 }
 
 func expandADApplicationAppRoles(i interface{}) *[]graphrbac.AppRole {
-	input := i.(*schema.Set).List()
+	input := i.([]interface{})
 	if len(input) == 0 {
 		return nil
 	}
@@ -877,7 +882,7 @@ func expandADApplicationAppRoles(i interface{}) *[]graphrbac.AppRole {
 }
 
 func expandADApplicationOAuth2Permissions(i interface{}) *[]graphrbac.OAuth2Permission {
-	input := i.(*schema.Set).List()
+	input := i.([]interface{})
 	result := make([]graphrbac.OAuth2Permission, 0)
 
 	for _, raw := range input {
@@ -942,7 +947,7 @@ func adApplicationValidateRolesScopes(appRoles, oauth2Permissions interface{}) e
 	var values []string
 
 	if appRoles != nil {
-		for _, roleRaw := range appRoles.(*schema.Set).List() {
+		for _, roleRaw := range appRoles.([]interface{}) {
 			role := roleRaw.(map[string]interface{})
 			if val := role["value"].(string); val != "" {
 				values = append(values, val)
@@ -951,7 +956,7 @@ func adApplicationValidateRolesScopes(appRoles, oauth2Permissions interface{}) e
 	}
 
 	if oauth2Permissions != nil {
-		for _, scopeRaw := range oauth2Permissions.(*schema.Set).List() {
+		for _, scopeRaw := range oauth2Permissions.([]interface{}) {
 			scope := scopeRaw.(map[string]interface{})
 			if val := scope["value"].(string); val != "" {
 				values = append(values, val)
