@@ -15,13 +15,6 @@ import (
 func AzureADProvider() terraform.ResourceProvider {
 	p := &schema.Provider{
 		Schema: map[string]*schema.Schema{
-			// TODO: remove subscription_id field at next major version
-			"subscription_id": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("ARM_SUBSCRIPTION_ID", ""),
-			},
-
 			"client_id": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -104,21 +97,9 @@ func AzureADProvider() terraform.ResourceProvider {
 
 func providerConfigure(p *schema.Provider) schema.ConfigureFunc {
 	return func(d *schema.ResourceData) (interface{}, error) {
-		// TODO: drop subscription_id in v1.0
-		// When constructing the Builder, we default to using the tenant ID for the subscription ID.
-		// Although this has no effect since we never consume it, this practise mimics
-		// the Azure CLI and it seems the most sensible value to use after a nonsense string.
-		// However, if subscription_id _is_ configured for the provider, we'll use that since it's
-		// currently exposed via data.azuread_client_config.
-		subscriptionId := d.Get("subscription_id").(string)
-		if subscriptionId == "" {
-			subscriptionId = d.Get("tenant_id").(string)
-		}
-
 		builder := &authentication.Builder{
 			ClientID:           d.Get("client_id").(string),
 			ClientSecret:       d.Get("client_secret").(string),
-			SubscriptionID:     subscriptionId,
 			TenantID:           d.Get("tenant_id").(string),
 			Environment:        d.Get("environment").(string),
 			MsiEndpoint:        d.Get("msi_endpoint").(string),
@@ -130,11 +111,12 @@ func providerConfigure(p *schema.Provider) schema.ConfigureFunc {
 			SupportsClientSecretAuth:       true,
 			SupportsManagedServiceIdentity: d.Get("use_msi").(bool),
 			SupportsAzureCliToken:          true,
+			TenantOnly:                     true,
 		}
 
 		config, err := builder.Build()
 		if err != nil {
-			return nil, fmt.Errorf("Error building AzureAD Client: %s", err)
+			return nil, fmt.Errorf("building AzureAD Client: %s", err)
 		}
 
 		client, err := clients.GetAadClient(config, p.TerraformVersion, p.StopContext())

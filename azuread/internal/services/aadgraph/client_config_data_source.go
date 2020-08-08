@@ -28,12 +28,6 @@ func DataClientConfig() *schema.Resource {
 				Computed: true,
 			},
 
-			"subscription_id": {
-				Type:       schema.TypeString,
-				Computed:   true,
-				Deprecated: fmt.Sprintf("The %q attribute will be removed in version 1.0 of the provider. If you are using this attribute, you should instead use the %q data source from the AzureRM provider", "subscription_id", "azurerm_client_config"),
-			},
-
 			"object_id": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -66,11 +60,6 @@ func dataSourceArmClientConfigRead(d *schema.ResourceData, meta interface{}) err
 	d.Set("client_id", client.ClientID)
 	d.Set("object_id", client.ObjectID)
 	d.Set("tenant_id", client.TenantID)
-
-	// TODO: remove in v1.0
-	if client.SubscriptionID != client.TenantID {
-		d.Set("subscription_id", client.SubscriptionID)
-	}
 
 	return nil
 }
