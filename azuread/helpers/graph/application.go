@@ -149,13 +149,13 @@ func SchemaOptionalClaims() *schema.Schema {
 	}
 }
 
-func FlattenAppRoles(in *[]graphrbac.AppRole) []interface{} {
+func FlattenAppRoles(in *[]graphrbac.AppRole) []map[string]interface{} {
 	if in == nil {
-		return []interface{}{}
+		return []map[string]interface{}{}
 	}
 
-	appRoles := make([]interface{}, 0)
-	for _, role := range *in {
+	appRoles := make([]map[string]interface{}, len(*in))
+	for i, role := range *in {
 		appRole := make(map[string]interface{})
 		if v := role.ID; v != nil {
 			appRole["id"] = *v
@@ -175,7 +175,7 @@ func FlattenAppRoles(in *[]graphrbac.AppRole) []interface{} {
 		if v := role.Value; v != nil {
 			appRole["value"] = *v
 		}
-		appRoles = append(appRoles, appRole)
+		appRoles[i] = appRole
 	}
 
 	return appRoles

@@ -18,15 +18,15 @@ func TestAccAzureADApplicationDataSource_byObjectId(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccADApplication_basic(ri),
+				Config: testAccApplication_basic(ri),
 			},
 			{
 				Config: testAccAzureADApplicationDataSource_objectId(ri),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(dataSourceName),
+					testCheckApplicationExists(dataSourceName),
 					resource.TestCheckResourceAttr(dataSourceName, "name", fmt.Sprintf("acctest-APP-%d", ri)),
 					resource.TestCheckResourceAttr(dataSourceName, "homepage", fmt.Sprintf("https://acctest-APP-%d", ri)),
 					resource.TestCheckResourceAttr(dataSourceName, "identifier_uris.#", "0"),
@@ -53,15 +53,15 @@ func TestAccAzureADApplicationDataSource_byObjectIdComplete(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccADApplication_complete(ri, pw),
+				Config: testAccApplication_complete(ri, pw),
 			},
 			{
 				Config: testAccAzureADApplicationDataSource_objectIdComplete(ri, pw),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(dataSourceName),
+					testCheckApplicationExists(dataSourceName),
 					resource.TestCheckResourceAttr(dataSourceName, "name", fmt.Sprintf("acctest-APP-%d", ri)),
 					resource.TestCheckResourceAttr(dataSourceName, "homepage", fmt.Sprintf("https://homepage-%d", ri)),
 					resource.TestCheckResourceAttr(dataSourceName, "identifier_uris.#", "1"),
@@ -86,15 +86,15 @@ func TestAccAzureADApplicationDataSource_byApplicationId(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccADApplication_basic(ri),
+				Config: testAccApplication_basic(ri),
 			},
 			{
 				Config: testAccAzureADApplicationDataSource_applicationId(ri),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(dataSourceName),
+					testCheckApplicationExists(dataSourceName),
 					resource.TestCheckResourceAttr(dataSourceName, "name", fmt.Sprintf("acctest-APP-%d", ri)),
 					resource.TestCheckResourceAttr(dataSourceName, "homepage", fmt.Sprintf("https://acctest-APP-%d", ri)),
 					resource.TestCheckResourceAttr(dataSourceName, "identifier_uris.#", "0"),
@@ -116,15 +116,15 @@ func TestAccAzureADApplicationDataSource_byName(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccADApplication_basic(ri),
+				Config: testAccApplication_basic(ri),
 			},
 			{
 				Config: testAccAzureADApplicationDataSource_name(ri),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(dataSourceName),
+					testCheckApplicationExists(dataSourceName),
 					resource.TestCheckResourceAttr(dataSourceName, "name", fmt.Sprintf("acctest-APP-%d", ri)),
 					resource.TestCheckResourceAttr(dataSourceName, "homepage", fmt.Sprintf("https://acctest-APP-%d", ri)),
 					resource.TestCheckResourceAttr(dataSourceName, "identifier_uris.#", "0"),
@@ -140,7 +140,7 @@ func TestAccAzureADApplicationDataSource_byName(t *testing.T) {
 }
 
 func testAccAzureADApplicationDataSource_objectId(ri int) string {
-	template := testAccADApplication_basic(ri)
+	template := testAccApplication_basic(ri)
 	return fmt.Sprintf(`
 %s
 
@@ -151,7 +151,7 @@ data "azuread_application" "tests" {
 }
 
 func testAccAzureADApplicationDataSource_objectIdComplete(ri int, pw string) string {
-	template := testAccADApplication_complete(ri, pw)
+	template := testAccApplication_complete(ri, pw)
 	return fmt.Sprintf(`
 %s
 
@@ -162,7 +162,7 @@ data "azuread_application" "tests" {
 }
 
 func testAccAzureADApplicationDataSource_applicationId(ri int) string {
-	template := testAccADApplication_basic(ri)
+	template := testAccApplication_basic(ri)
 	return fmt.Sprintf(`
 %s
 
@@ -173,7 +173,7 @@ data "azuread_application" "tests" {
 }
 
 func testAccAzureADApplicationDataSource_name(ri int) string {
-	template := testAccADApplication_basic(ri)
+	template := testAccApplication_basic(ri)
 	return fmt.Sprintf(`
 %s
 

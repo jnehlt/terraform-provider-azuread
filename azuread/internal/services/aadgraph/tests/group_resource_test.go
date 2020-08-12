@@ -295,7 +295,7 @@ func TestAccAzureADGroup_preventDuplicateNames(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccAzureADGroup_duplicateName(ri),

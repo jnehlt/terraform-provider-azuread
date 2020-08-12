@@ -15,655 +15,555 @@ import (
 	"github.com/terraform-providers/terraform-provider-azuread/azuread/internal/clients"
 )
 
-func TestAccAzureADApplication_basic(t *testing.T) {
-	resourceName := "azuread_application.tests"
-	ri := tf.AccRandTimeInt()
-	appName := fmt.Sprintf("acctest-APP-%d", ri)
+func TestAccAzureApplication_basic(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_application", "test")
+	appName := fmt.Sprintf("acctest-APP-%d", data.RandomInteger)
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccADApplication_basic(ri),
+				Config: testAccApplication_basic(data.RandomInteger),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(resourceName),
-					resource.TestCheckResourceAttr(resourceName, "name", appName),
-					resource.TestCheckResourceAttr(resourceName, "homepage", fmt.Sprintf("https://%s", appName)),
-					resource.TestCheckResourceAttr(resourceName, "oauth2_allow_implicit_flow", "false"),
-					resource.TestCheckResourceAttr(resourceName, "type", "webapp/api"),
-					resource.TestCheckResourceAttr(resourceName, "oauth2_permissions.#", "1"),
-					resource.TestCheckResourceAttrSet(resourceName, "application_id"),
-					resource.TestCheckResourceAttrSet(resourceName, "object_id"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "name", appName),
+					resource.TestCheckResourceAttr(data.ResourceName, "homepage", fmt.Sprintf("https://%s", appName)),
+					resource.TestCheckResourceAttr(data.ResourceName, "oauth2_allow_implicit_flow", "false"),
+					resource.TestCheckResourceAttr(data.ResourceName, "type", "webapp/api"),
+					resource.TestCheckResourceAttr(data.ResourceName, "oauth2_permissions.#", "1"),
+					resource.TestCheckResourceAttrSet(data.ResourceName, "application_id"),
+					resource.TestCheckResourceAttrSet(data.ResourceName, "object_id"),
 				),
 			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
+			data.ImportStep(),
 		},
 	})
 }
 
-func TestAccAzureADApplication_complete(t *testing.T) {
-	resourceName := "azuread_application.tests"
-	ri := tf.AccRandTimeInt()
+func TestAccAzureApplication_complete(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_application", "test")
 	pw := "p@$$wR2" + acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum)
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccADApplication_complete(ri, pw),
+				Config: testAccApplication_complete(data.RandomInteger, pw),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(resourceName),
-					resource.TestCheckResourceAttr(resourceName, "name", fmt.Sprintf("acctest-APP-%[1]d", ri)),
-					resource.TestCheckResourceAttr(resourceName, "homepage", fmt.Sprintf("https://homepage-%d", ri)),
-					resource.TestCheckResourceAttr(resourceName, "oauth2_allow_implicit_flow", "true"),
-					resource.TestCheckResourceAttr(resourceName, "identifier_uris.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "identifier_uris.0", fmt.Sprintf("http://%d.hashicorptest.com/00000000-0000-0000-0000-00000000", ri)),
-					resource.TestCheckResourceAttr(resourceName, "reply_urls.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "group_membership_claims", "All"),
-					resource.TestCheckResourceAttr(resourceName, "optional_claims.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "optional_claims.0.access_token.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "optional_claims.0.id_token.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "required_resource_access.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "oauth2_permissions.#", "2"),
-					resource.TestCheckResourceAttrSet(resourceName, "application_id"),
-					resource.TestCheckResourceAttrSet(resourceName, "object_id"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "name", fmt.Sprintf("acctest-APP-%[1]d", data.RandomInteger)),
+					resource.TestCheckResourceAttr(data.ResourceName, "homepage", fmt.Sprintf("https://homepage-%d", data.RandomInteger)),
+					resource.TestCheckResourceAttr(data.ResourceName, "oauth2_allow_implicit_flow", "true"),
+					resource.TestCheckResourceAttr(data.ResourceName, "identifier_uris.#", "1"),
+					resource.TestCheckResourceAttr(data.ResourceName, "identifier_uris.0", fmt.Sprintf("http://%d.hashicorptest.com/00000000-0000-0000-0000-00000000", data.RandomInteger)),
+					resource.TestCheckResourceAttr(data.ResourceName, "reply_urls.#", "1"),
+					resource.TestCheckResourceAttr(data.ResourceName, "group_membership_claims", "All"),
+					resource.TestCheckResourceAttr(data.ResourceName, "optional_claims.#", "1"),
+					resource.TestCheckResourceAttr(data.ResourceName, "optional_claims.0.access_token.#", "2"),
+					resource.TestCheckResourceAttr(data.ResourceName, "optional_claims.0.id_token.#", "1"),
+					resource.TestCheckResourceAttr(data.ResourceName, "required_resource_access.#", "2"),
+					resource.TestCheckResourceAttr(data.ResourceName, "oauth2_permissions.#", "2"),
+					resource.TestCheckResourceAttrSet(data.ResourceName, "application_id"),
+					resource.TestCheckResourceAttrSet(data.ResourceName, "object_id"),
 				),
 			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
+			data.ImportStep(),
 		},
 	})
 }
 
-func TestAccAzureADApplication_update(t *testing.T) {
-	resourceName := "azuread_application.tests"
-	ri := tf.AccRandTimeInt()
+func TestAccAzureApplication_update(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_application", "test")
 	updatedri := tf.AccRandTimeInt()
 	pw := "p@$$wR2" + acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum)
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccADApplication_basic(ri),
+				Config: testAccApplication_basic(data.RandomInteger),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(resourceName),
-					resource.TestCheckResourceAttr(resourceName, "name", fmt.Sprintf("acctest-APP-%[1]d", ri)),
-					resource.TestCheckResourceAttr(resourceName, "homepage", fmt.Sprintf("https://acctest-APP-%d", ri)),
-					resource.TestCheckResourceAttr(resourceName, "identifier_uris.#", "0"),
-					resource.TestCheckResourceAttr(resourceName, "reply_urls.#", "0"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "name", fmt.Sprintf("acctest-APP-%[1]d", data.RandomInteger)),
+					resource.TestCheckResourceAttr(data.ResourceName, "homepage", fmt.Sprintf("https://acctest-APP-%d", data.RandomInteger)),
+					resource.TestCheckResourceAttr(data.ResourceName, "identifier_uris.#", "0"),
+					resource.TestCheckResourceAttr(data.ResourceName, "reply_urls.#", "0"),
 				),
 			},
+			data.ImportStep(),
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				Config: testAccADApplication_complete(updatedri, pw),
+				Config: testAccApplication_complete(updatedri, pw),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(resourceName),
-					resource.TestCheckResourceAttr(resourceName, "name", fmt.Sprintf("acctest-APP-%[1]d", updatedri)),
-					resource.TestCheckResourceAttr(resourceName, "homepage", fmt.Sprintf("https://homepage-%d", updatedri)),
-					resource.TestCheckResourceAttr(resourceName, "identifier_uris.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "identifier_uris.0", fmt.Sprintf("http://%d.hashicorptest.com/00000000-0000-0000-0000-00000000", updatedri)),
-					resource.TestCheckResourceAttr(resourceName, "reply_urls.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "reply_urls.3714513888", "http://unittest.hashicorptest.com"),
-					resource.TestCheckResourceAttr(resourceName, "optional_claims.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "optional_claims.0.access_token.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "optional_claims.0.id_token.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "required_resource_access.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "oauth2_permissions.#", "2"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "name", fmt.Sprintf("acctest-APP-%[1]d", updatedri)),
+					resource.TestCheckResourceAttr(data.ResourceName, "homepage", fmt.Sprintf("https://homepage-%d", updatedri)),
+					resource.TestCheckResourceAttr(data.ResourceName, "identifier_uris.#", "1"),
+					resource.TestCheckResourceAttr(data.ResourceName, "identifier_uris.0", fmt.Sprintf("http://%d.hashicorptest.com/00000000-0000-0000-0000-00000000", updatedri)),
+					resource.TestCheckResourceAttr(data.ResourceName, "reply_urls.#", "1"),
+					resource.TestCheckResourceAttr(data.ResourceName, "reply_urls.3714513888", "http://unittest.hashicorptest.com"),
+					resource.TestCheckResourceAttr(data.ResourceName, "optional_claims.#", "1"),
+					resource.TestCheckResourceAttr(data.ResourceName, "optional_claims.0.access_token.#", "2"),
+					resource.TestCheckResourceAttr(data.ResourceName, "optional_claims.0.id_token.#", "1"),
+					resource.TestCheckResourceAttr(data.ResourceName, "required_resource_access.#", "2"),
+					resource.TestCheckResourceAttr(data.ResourceName, "oauth2_permissions.#", "2"),
 				),
 			},
+			data.ImportStep(),
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				Config: testAccADApplication_basicEmpty(ri),
+				Config: testAccApplication_basicEmpty(data.RandomInteger),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(resourceName),
-					resource.TestCheckResourceAttr(resourceName, "name", fmt.Sprintf("acctest-APP-%[1]d", ri)),
-					resource.TestCheckResourceAttr(resourceName, "identifier_uris.#", "0"),
-					resource.TestCheckResourceAttr(resourceName, "reply_urls.#", "0"),
-					resource.TestCheckResourceAttr(resourceName, "optional_claims.#", "0"),
-					resource.TestCheckResourceAttr(resourceName, "oauth2_permissions.#", "0"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "name", fmt.Sprintf("acctest-APP-%[1]d", data.RandomInteger)),
+					resource.TestCheckResourceAttr(data.ResourceName, "identifier_uris.#", "0"),
+					resource.TestCheckResourceAttr(data.ResourceName, "reply_urls.#", "0"),
+					resource.TestCheckResourceAttr(data.ResourceName, "optional_claims.#", "0"),
+					resource.TestCheckResourceAttr(data.ResourceName, "oauth2_permissions.#", "0"),
 				),
 			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
+			data.ImportStep(),
 		},
 	})
 }
 
-func TestAccAzureADApplication_http_homepage(t *testing.T) {
-	resourceName := "azuread_application.tests"
-	ri := tf.AccRandTimeInt()
+func TestAccAzureApplication_http_homepage(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_application", "test")
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccADApplication_http_homepage(ri),
+				Config: testAccApplication_http_homepage(data.RandomInteger),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(resourceName),
-					resource.TestCheckResourceAttr(resourceName, "name", fmt.Sprintf("acctest-APP-%[1]d", ri)),
-					resource.TestCheckResourceAttr(resourceName, "homepage", fmt.Sprintf("http://homepage-%d", ri)),
-					resource.TestCheckResourceAttr(resourceName, "oauth2_allow_implicit_flow", "false"),
-					resource.TestCheckResourceAttr(resourceName, "type", "webapp/api"),
-					resource.TestCheckResourceAttr(resourceName, "oauth2_permissions.#", "1"),
-					resource.TestCheckResourceAttrSet(resourceName, "application_id"),
-					resource.TestCheckResourceAttrSet(resourceName, "object_id"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "name", fmt.Sprintf("acctest-APP-%[1]d", data.RandomInteger)),
+					resource.TestCheckResourceAttr(data.ResourceName, "homepage", fmt.Sprintf("http://homepage-%d", data.RandomInteger)),
+					resource.TestCheckResourceAttr(data.ResourceName, "oauth2_allow_implicit_flow", "false"),
+					resource.TestCheckResourceAttr(data.ResourceName, "type", "webapp/api"),
+					resource.TestCheckResourceAttr(data.ResourceName, "oauth2_permissions.#", "1"),
+					resource.TestCheckResourceAttrSet(data.ResourceName, "application_id"),
+					resource.TestCheckResourceAttrSet(data.ResourceName, "object_id"),
 				),
 			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
+			data.ImportStep(),
 		},
 	})
 }
 
-func TestAccAzureADApplication_publicClient(t *testing.T) {
-	resourceName := "azuread_application.tests"
-	ri := tf.AccRandTimeInt()
+func TestAccAzureApplication_publicClient(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_application", "test")
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccADApplication_publicClient(ri),
+				Config: testAccApplication_publicClient(data.RandomInteger),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(resourceName),
-					resource.TestCheckResourceAttr(resourceName, "public_client", "true"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "public_client", "true"),
 				),
 			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
+			data.ImportStep(),
 		},
 	})
 }
 
-func TestAccAzureADApplication_availableToOtherTenants(t *testing.T) {
-	resourceName := "azuread_application.tests"
-	ri := tf.AccRandTimeInt()
+func TestAccAzureApplication_availableToOtherTenants(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_application", "test")
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccADApplication_availableToOtherTenants(ri),
+				Config: testAccApplication_availableToOtherTenants(data.RandomInteger),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(resourceName),
-					resource.TestCheckResourceAttr(resourceName, "available_to_other_tenants", "true"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "available_to_other_tenants", "true"),
 				),
 			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
+			data.ImportStep(),
 		},
 	})
 }
 
-func TestAccAzureADApplication_appRoles(t *testing.T) {
-	resourceName := "azuread_application.tests"
-	ri := tf.AccRandTimeInt()
+func TestAccAzureApplication_appRoles(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_application", "test")
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccADApplication_appRoles(ri),
+				Config: testAccApplication_appRoles(data.RandomInteger),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(resourceName),
-					resource.TestCheckResourceAttr(resourceName, "app_role.#", "1"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "app_role.#", "1"),
 				),
 			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
+			data.ImportStep(),
 		},
 	})
 }
 
-func TestAccAzureADApplication_appRolesManualID(t *testing.T) {
-	rn := "azuread_application.test"
-	ri := tf.AccRandTimeInt()
+func TestAccAzureApplication_appRolesManualID(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_application", "test")
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccADApplication_appRolesManualID(ri),
+				Config: testAccApplication_appRolesManualID(data.RandomInteger),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(rn),
-					resource.TestCheckResourceAttr(rn, "app_role.#", "1"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "app_role.#", "1"),
 				),
 			},
-			{
-				ResourceName:      rn,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
+			data.ImportStep(),
 		},
 	})
 }
 
-func TestAccAzureADApplication_appRolesNoValue(t *testing.T) {
-	rn := "azuread_application.tests"
-	ri := tf.AccRandTimeInt()
+func TestAccAzureApplication_appRolesNoValue(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_application", "test")
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccADApplication_appRolesNoValue(ri),
+				Config: testAccApplication_appRolesNoValue(data.RandomInteger),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(rn),
-					resource.TestCheckResourceAttr(rn, "app_role.#", "1"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "app_role.#", "1"),
 				),
 			},
-			{
-				ResourceName:      rn,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
+			data.ImportStep(),
 		},
 	})
 }
 
-func TestAccAzureADApplication_appRolesUpdate(t *testing.T) {
-	rn := "azuread_application.tests"
-	ri := tf.AccRandTimeInt()
+func TestAccAzureApplication_appRolesUpdate(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_application", "test")
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccADApplication_appRoles(ri),
+				Config: testAccApplication_appRoles(data.RandomInteger),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(rn),
-					resource.TestCheckResourceAttr(rn, "app_role.#", "1"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "app_role.#", "1"),
 				),
 			},
+			data.ImportStep(),
 			{
-				ResourceName:      rn,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				Config: testAccADApplication_appRolesUpdate(ri),
+				Config: testAccApplication_appRolesUpdate(data.RandomInteger),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(rn),
-					resource.TestCheckResourceAttr(rn, "app_role.#", "2"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "app_role.#", "2"),
 				),
 			},
-			{
-				ResourceName:      rn,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
+			data.ImportStep(),
 		},
 	})
 }
 
-func TestAccAzureADApplication_appRolesDelete(t *testing.T) {
-	rn := "azuread_application.tests"
-	ri := tf.AccRandTimeInt()
+func TestAccAzureApplication_appRolesDelete(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_application", "test")
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccADApplication_appRolesUpdate(ri),
+				Config: testAccApplication_appRolesUpdate(data.RandomInteger),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(rn),
-					resource.TestCheckResourceAttr(rn, "app_role.#", "2"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "app_role.#", "2"),
 				),
 			},
+			data.ImportStep(),
 			{
-				Config: testAccADApplication_appRoles(ri),
+				Config: testAccApplication_appRoles(data.RandomInteger),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(rn),
-					resource.TestCheckResourceAttr(rn, "app_role.#", "1"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "app_role.#", "1"),
 				),
 			},
+			data.ImportStep(),
 		},
 	})
 }
 
-func TestAccAzureADApplication_groupMembershipClaimsUpdate(t *testing.T) {
-	rn := "azuread_application.tests"
-	ri := tf.AccRandTimeInt()
+func TestAccAzureApplication_groupMembershipClaimsUpdate(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_application", "test")
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccADApplication_basic(ri),
+				Config: testAccApplication_basic(data.RandomInteger),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(rn),
+					testCheckApplicationExists(data.ResourceName),
 				),
 			},
+			data.ImportStep(),
 			{
-				Config: testAccADApplication_withGroupMembershipClaimsDirectoryRole(ri),
+				Config: testAccApplication_withGroupMembershipClaimsDirectoryRole(data.RandomInteger),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(rn),
-					resource.TestCheckResourceAttr(rn, "group_membership_claims", "DirectoryRole"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "group_membership_claims", "DirectoryRole"),
 				),
 			},
+			data.ImportStep(),
 			{
-				Config: testAccADApplication_withGroupMembershipClaimsSecurityGroup(ri),
+				Config: testAccApplication_withGroupMembershipClaimsSecurityGroup(data.RandomInteger),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(rn),
-					resource.TestCheckResourceAttr(rn, "group_membership_claims", "SecurityGroup"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "group_membership_claims", "SecurityGroup"),
 				),
 			},
+			data.ImportStep(),
 			{
-				Config: testAccADApplication_withGroupMembershipClaimsApplicationGroup(ri),
+				Config: testAccApplication_withGroupMembershipClaimsApplicationGroup(data.RandomInteger),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(rn),
-					resource.TestCheckResourceAttr(rn, "group_membership_claims", "ApplicationGroup"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "group_membership_claims", "ApplicationGroup"),
 				),
 			},
-			{
-				ResourceName:      rn,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
+			data.ImportStep(),
 		},
 	})
 }
 
-func TestAccAzureADApplication_native(t *testing.T) {
-	rn := "azuread_application.tests"
-	ri := tf.AccRandTimeInt()
+func TestAccAzureApplication_native(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_application", "test")
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccADApplication_native(ri),
+				Config: testAccApplication_native(data.RandomInteger),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(rn),
-					resource.TestCheckResourceAttr(rn, "name", fmt.Sprintf("acctest-APP-%[1]d", ri)),
-					resource.TestCheckResourceAttr(rn, "homepage", ""),
-					resource.TestCheckResourceAttr(rn, "type", "native"),
-					resource.TestCheckResourceAttr(rn, "identifier_uris.#", "0"),
-					resource.TestCheckResourceAttrSet(rn, "application_id"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "name", fmt.Sprintf("acctest-APP-%[1]d", data.RandomInteger)),
+					resource.TestCheckResourceAttr(data.ResourceName, "homepage", ""),
+					resource.TestCheckResourceAttr(data.ResourceName, "type", "native"),
+					resource.TestCheckResourceAttr(data.ResourceName, "identifier_uris.#", "0"),
+					resource.TestCheckResourceAttrSet(data.ResourceName, "application_id"),
 				),
 			},
-			{
-				ResourceName:      rn,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
+			data.ImportStep(),
 		},
 	})
 }
 
-func TestAccAzureADApplication_nativeReplyUrls(t *testing.T) {
-	rn := "azuread_application.tests"
-	ri := tf.AccRandTimeInt()
+func TestAccAzureApplication_nativeReplyUrls(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_application", "test")
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccADApplication_nativeReplyUrls(ri),
+				Config: testAccApplication_nativeReplyUrls(data.RandomInteger),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(rn),
-					resource.TestCheckResourceAttr(rn, "name", fmt.Sprintf("acctest-APP-%[1]d", ri)),
-					resource.TestCheckResourceAttr(rn, "type", "native"),
-					resource.TestCheckResourceAttr(rn, "reply_urls.#", "1"),
-					resource.TestCheckResourceAttr(rn, "reply_urls.3637476042", "urn:ietf:wg:oauth:2.0:oob"),
-					resource.TestCheckResourceAttrSet(rn, "application_id"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "name", fmt.Sprintf("acctest-APP-%[1]d", data.RandomInteger)),
+					resource.TestCheckResourceAttr(data.ResourceName, "type", "native"),
+					resource.TestCheckResourceAttr(data.ResourceName, "reply_urls.#", "1"),
+					resource.TestCheckResourceAttr(data.ResourceName, "reply_urls.3637476042", "urn:ietf:wg:oauth:2.0:oob"),
+					resource.TestCheckResourceAttrSet(data.ResourceName, "application_id"),
 				),
 			},
-			{
-				ResourceName:      rn,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
+			data.ImportStep(),
 		},
 	})
 }
 
-func TestAccAzureADApplication_nativeUpdate(t *testing.T) {
-	rn := "azuread_application.tests"
-	ri := tf.AccRandTimeInt()
+func TestAccAzureApplication_nativeUpdate(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_application", "test")
 	pw := "p@$$wR2" + acctest.RandStringFromCharSet(7, acctest.CharSetAlphaNum)
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccADApplication_basic(ri),
+				Config: testAccApplication_basic(data.RandomInteger),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(rn),
-					resource.TestCheckResourceAttr(rn, "name", fmt.Sprintf("acctest-APP-%[1]d", ri)),
-					resource.TestCheckResourceAttr(rn, "homepage", fmt.Sprintf("https://acctest-APP-%d", ri)),
-					resource.TestCheckResourceAttr(rn, "type", "webapp/api"),
-					resource.TestCheckResourceAttr(rn, "identifier_uris.#", "0"),
-					resource.TestCheckResourceAttrSet(rn, "application_id"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "name", fmt.Sprintf("acctest-APP-%[1]d", data.RandomInteger)),
+					resource.TestCheckResourceAttr(data.ResourceName, "homepage", fmt.Sprintf("https://acctest-APP-%d", data.RandomInteger)),
+					resource.TestCheckResourceAttr(data.ResourceName, "type", "webapp/api"),
+					resource.TestCheckResourceAttr(data.ResourceName, "identifier_uris.#", "0"),
+					resource.TestCheckResourceAttrSet(data.ResourceName, "application_id"),
 				),
 			},
+			data.ImportStep(),
 			{
-				Config: testAccADApplication_native(ri),
+				Config: testAccApplication_native(data.RandomInteger),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(rn),
-					resource.TestCheckResourceAttr(rn, "name", fmt.Sprintf("acctest-APP-%[1]d", ri)),
-					resource.TestCheckResourceAttr(rn, "homepage", fmt.Sprintf("https://acctest-APP-%d", ri)),
-					resource.TestCheckResourceAttr(rn, "type", "native"),
-					resource.TestCheckResourceAttr(rn, "identifier_uris.#", "0"),
-					resource.TestCheckResourceAttrSet(rn, "application_id"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "name", fmt.Sprintf("acctest-APP-%[1]d", data.RandomInteger)),
+					resource.TestCheckResourceAttr(data.ResourceName, "homepage", fmt.Sprintf("https://acctest-APP-%d", data.RandomInteger)),
+					resource.TestCheckResourceAttr(data.ResourceName, "type", "native"),
+					resource.TestCheckResourceAttr(data.ResourceName, "identifier_uris.#", "0"),
+					resource.TestCheckResourceAttrSet(data.ResourceName, "application_id"),
 				),
 			},
+			data.ImportStep(),
 			{
-				ResourceName:      rn,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				Config: testAccADApplication_complete(ri, pw),
+				Config: testAccApplication_complete(data.RandomInteger, pw),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(rn),
-					resource.TestCheckResourceAttr(rn, "name", fmt.Sprintf("acctest-APP-%[1]d", ri)),
-					resource.TestCheckResourceAttr(rn, "homepage", fmt.Sprintf("https://homepage-%d", ri)),
-					resource.TestCheckResourceAttr(rn, "identifier_uris.#", "1"),
-					resource.TestCheckResourceAttr(rn, "identifier_uris.0", fmt.Sprintf("http://%d.hashicorptest.com/00000000-0000-0000-0000-00000000", ri)),
-					resource.TestCheckResourceAttr(rn, "reply_urls.#", "1"),
-					resource.TestCheckResourceAttr(rn, "required_resource_access.#", "2"),
-					resource.TestCheckResourceAttrSet(rn, "application_id"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "name", fmt.Sprintf("acctest-APP-%[1]d", data.RandomInteger)),
+					resource.TestCheckResourceAttr(data.ResourceName, "homepage", fmt.Sprintf("https://homepage-%d", data.RandomInteger)),
+					resource.TestCheckResourceAttr(data.ResourceName, "identifier_uris.#", "1"),
+					resource.TestCheckResourceAttr(data.ResourceName, "identifier_uris.0", fmt.Sprintf("http://%d.hashicorptest.com/00000000-0000-0000-0000-00000000", data.RandomInteger)),
+					resource.TestCheckResourceAttr(data.ResourceName, "reply_urls.#", "1"),
+					resource.TestCheckResourceAttr(data.ResourceName, "required_resource_access.#", "2"),
+					resource.TestCheckResourceAttrSet(data.ResourceName, "application_id"),
 				),
 			},
-			{
-				ResourceName:      rn,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
+			data.ImportStep(),
 		},
 	})
 }
 
-func TestAccAzureADApplication_native_app_does_not_allow_identifier_uris(t *testing.T) {
-	ri := tf.AccRandTimeInt()
+func TestAccAzureApplication_native_app_does_not_allow_identifier_uris(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_application", "test")
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config:      testAccADApplication_native_app_does_not_allow_identifier_uris(ri),
+				Config:      testAccApplication_native_app_does_not_allow_identifier_uris(data.RandomInteger),
 				ExpectError: regexp.MustCompile("identifier_uris is not required for a native application"),
 			},
 		},
 	})
 }
 
-func TestAccAzureADApplication_oauth2PermissionsUpdate(t *testing.T) {
-	resourceName := "azuread_application.tests"
-	ri := tf.AccRandTimeInt()
+func TestAccAzureApplication_oauth2PermissionsUpdate(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_application", "test")
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccADApplication_basic(ri),
+				Config: testAccApplication_basic(data.RandomInteger),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(resourceName),
-					resource.TestCheckResourceAttr(resourceName, "name", fmt.Sprintf("acctest-APP-%[1]d", ri)),
-					//resource.TestCheckResourceAttr(resourceName, "identifier_uris.#", "0"),
-					resource.TestCheckResourceAttr(resourceName, "oauth2_permissions.#", "1"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "name", fmt.Sprintf("acctest-APP-%[1]d", data.RandomInteger)),
+					resource.TestCheckResourceAttr(data.ResourceName, "oauth2_permissions.#", "1"),
 				),
 			},
+			data.ImportStep(),
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				Config: testAccADApplication_oauth2Permissions(ri),
+				Config: testAccApplication_oauth2Permissions(data.RandomInteger),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(resourceName),
-					resource.TestCheckResourceAttr(resourceName, "name", fmt.Sprintf("acctest-APP-%[1]d", ri)),
-					resource.TestCheckResourceAttr(resourceName, "oauth2_permissions.#", "2"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "name", fmt.Sprintf("acctest-APP-%[1]d", data.RandomInteger)),
+					resource.TestCheckResourceAttr(data.ResourceName, "oauth2_permissions.#", "2"),
 				),
 			},
+			data.ImportStep(),
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
-			{
-				Config: testAccADApplication_oauth2PermissionsEmpty(ri),
+				Config: testAccApplication_oauth2PermissionsEmpty(data.RandomInteger),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(resourceName),
-					resource.TestCheckResourceAttr(resourceName, "name", fmt.Sprintf("acctest-APP-%[1]d", ri)),
-					resource.TestCheckResourceAttr(resourceName, "oauth2_permissions.#", "0"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "name", fmt.Sprintf("acctest-APP-%[1]d", data.RandomInteger)),
+					resource.TestCheckResourceAttr(data.ResourceName, "oauth2_permissions.#", "0"),
 				),
 			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
+			data.ImportStep(),
 		},
 	})
 }
 
-func TestAccAzureADApplication_oauth2PermissionsManualID(t *testing.T) {
-	resourceName := "azuread_application.tests"
-	ri := tf.AccRandTimeInt()
+func TestAccAzureApplication_oauth2PermissionsManualID(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_application", "test")
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccADApplication_oauth2PermissionsManualID(ri),
+				Config: testAccApplication_oauth2PermissionsManualID(data.RandomInteger),
 				Check: resource.ComposeTestCheckFunc(
-					testCheckADApplicationExists(resourceName),
-					resource.TestCheckResourceAttr(resourceName, "name", fmt.Sprintf("acctest-APP-%[1]d", ri)),
-					resource.TestCheckResourceAttr(resourceName, "oauth2_permissions.#", "1"),
+					testCheckApplicationExists(data.ResourceName),
+					resource.TestCheckResourceAttr(data.ResourceName, "name", fmt.Sprintf("acctest-APP-%[1]d", data.RandomInteger)),
+					resource.TestCheckResourceAttr(data.ResourceName, "oauth2_permissions.#", "1"),
 				),
 			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-			},
+			data.ImportStep(),
 		},
 	})
 }
 
-func TestAccAzureADApplication_preventDuplicateNames(t *testing.T) {
-	ri := tf.AccRandTimeInt()
+func TestAccAzureApplication_preventDuplicateNames(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_application", "test")
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config:      testAccADApplication_duplicateName(ri),
+				Config:      testAccApplication_duplicateName(data.RandomInteger),
 				ExpectError: regexp.MustCompile("existing Application .+ was found"),
 			},
 		},
 	})
 }
 
-func TestAccAzureADApplication_duplicateAppRolesOauth2PermissionsValues(t *testing.T) {
-	ri := tf.AccRandTimeInt()
+func TestAccAzureApplication_duplicateAppRolesOauth2PermissionsValues(t *testing.T) {
+	data := acceptance.BuildTestData(t, "azuread_application", "test")
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config:      testAccADApplication_duplicateAppRolesOauth2PermissionsValues(ri),
+				Config:      testAccApplication_duplicateAppRolesOauth2PermissionsValues(data.RandomInteger),
 				ExpectError: regexp.MustCompile("validation failed: duplicate app_role / oauth2_permissions value found:"),
 			},
 		},
 	})
 }
 
-func testCheckADApplicationExists(name string) resource.TestCheckFunc {
+func testCheckApplicationExists(name string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[name]
 		if !ok {
@@ -685,7 +585,7 @@ func testCheckADApplicationExists(name string) resource.TestCheckFunc {
 	}
 }
 
-func testCheckADApplicationDestroy(s *terraform.State) error {
+func testCheckApplicationDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "azuread_application" {
 			continue
@@ -709,17 +609,17 @@ func testCheckADApplicationDestroy(s *terraform.State) error {
 	return nil
 }
 
-func testAccADApplication_basic(ri int) string {
+func testAccApplication_basic(ri int) string {
 	return fmt.Sprintf(`
-resource "azuread_application" "tests" {
+resource "azuread_application" "test" {
   name = "acctest-APP-%[1]d"
 }
 `, ri)
 }
 
-func testAccADApplication_basicEmpty(ri int) string {
+func testAccApplication_basicEmpty(ri int) string {
 	return fmt.Sprintf(`
-resource "azuread_application" "tests" {
+resource "azuread_application" "test" {
   name                    = "acctest-APP-%[1]d"
   identifier_uris         = []
   oauth2_permissions      = []
@@ -729,18 +629,18 @@ resource "azuread_application" "tests" {
 `, ri)
 }
 
-func testAccADApplication_http_homepage(ri int) string {
+func testAccApplication_http_homepage(ri int) string {
 	return fmt.Sprintf(`
-resource "azuread_application" "tests" {
+resource "azuread_application" "test" {
   name     = "acctest-APP-%[1]d"
   homepage = "http://homepage-%[1]d"
 }
 `, ri)
 }
 
-func testAccADApplication_publicClient(ri int) string {
+func testAccApplication_publicClient(ri int) string {
 	return fmt.Sprintf(`
-resource "azuread_application" "tests" {
+resource "azuread_application" "test" {
   name          = "acctest-APP-%[1]d"
   type          = "native"
   public_client = true
@@ -748,13 +648,13 @@ resource "azuread_application" "tests" {
 `, ri)
 }
 
-func testAccADApplication_availableToOtherTenants(ri int) string {
+func testAccApplication_availableToOtherTenants(ri int) string {
 	return fmt.Sprintf(`
 data "azuread_domains" "tenant_domain" {
   only_initial = true
 }
 
-resource "azuread_application" "tests" {
+resource "azuread_application" "test" {
   name                       = "acctest-APP-%[1]d"
   identifier_uris            = ["https://%[1]d.${data.azuread_domains.tenant_domain.domains.0.domain_name}"]
   available_to_other_tenants = true
@@ -762,38 +662,38 @@ resource "azuread_application" "tests" {
 `, ri)
 }
 
-func testAccADApplication_withGroupMembershipClaimsDirectoryRole(ri int) string {
+func testAccApplication_withGroupMembershipClaimsDirectoryRole(ri int) string {
 	return fmt.Sprintf(`
-resource "azuread_application" "tests" {
+resource "azuread_application" "test" {
   name                    = "acctest-APP-%[1]d"
   group_membership_claims = "DirectoryRole"
 }
 `, ri)
 }
 
-func testAccADApplication_withGroupMembershipClaimsSecurityGroup(ri int) string {
+func testAccApplication_withGroupMembershipClaimsSecurityGroup(ri int) string {
 	return fmt.Sprintf(`
-resource "azuread_application" "tests" {
+resource "azuread_application" "test" {
   name                    = "acctest-APP-%[1]d"
   group_membership_claims = "SecurityGroup"
 }
 `, ri)
 }
 
-func testAccADApplication_withGroupMembershipClaimsApplicationGroup(ri int) string {
+func testAccApplication_withGroupMembershipClaimsApplicationGroup(ri int) string {
 	return fmt.Sprintf(`
-resource "azuread_application" "tests" {
+resource "azuread_application" "test" {
   name                    = "acctest-APP-%[1]d"
   group_membership_claims = "ApplicationGroup"
 }
 `, ri)
 }
 
-func testAccADApplication_complete(ri int, pw string) string {
+func testAccApplication_complete(ri int, pw string) string {
 	return fmt.Sprintf(`
 %[1]s
 
-resource "azuread_application" "tests" {
+resource "azuread_application" "test" {
   name                       = "acctest-APP-%[2]d"
   homepage                   = "https://homepage-%[2]d"
   identifier_uris            = ["http://%[2]d.hashicorptest.com/00000000-0000-0000-0000-00000000"]
@@ -871,9 +771,9 @@ resource "azuread_application" "tests" {
 `, testAccADUser_basic(ri, pw), ri)
 }
 
-func testAccADApplication_appRoles(ri int) string {
+func testAccApplication_appRoles(ri int) string {
 	return fmt.Sprintf(`
-resource "azuread_application" "tests" {
+resource "azuread_application" "test" {
   name = "acctest-APP-%[1]d"
 
   app_role {
@@ -891,7 +791,7 @@ resource "azuread_application" "tests" {
 `, ri)
 }
 
-func testAccADApplication_appRolesManualID(ri int) string {
+func testAccApplication_appRolesManualID(ri int) string {
 	return fmt.Sprintf(`
 resource "azuread_application" "test" {
   name = "acctest-APP-%[1]d"
@@ -907,9 +807,9 @@ resource "azuread_application" "test" {
 `, ri)
 }
 
-func testAccADApplication_appRolesNoValue(ri int) string {
+func testAccApplication_appRolesNoValue(ri int) string {
 	return fmt.Sprintf(`
-resource "azuread_application" "tests" {
+resource "azuread_application" "test" {
   name = "acctest-APP-%[1]d"
 
   app_role {
@@ -922,9 +822,9 @@ resource "azuread_application" "tests" {
 `, ri)
 }
 
-func testAccADApplication_appRolesUpdate(ri int) string {
+func testAccApplication_appRolesUpdate(ri int) string {
 	return fmt.Sprintf(`
-resource "azuread_application" "tests" {
+resource "azuread_application" "test" {
   name = "acctestApp-%d"
 
   app_role {
@@ -946,9 +846,9 @@ resource "azuread_application" "tests" {
 `, ri)
 }
 
-func testAccADApplication_oauth2Permissions(ri int) string {
+func testAccApplication_oauth2Permissions(ri int) string {
 	return fmt.Sprintf(`
-resource "azuread_application" "tests" {
+resource "azuread_application" "test" {
   name = "acctest-APP-%[1]d"
 
   oauth2_permissions {
@@ -972,9 +872,9 @@ resource "azuread_application" "tests" {
 `, ri)
 }
 
-func testAccADApplication_oauth2PermissionsManualID(ri int) string {
+func testAccApplication_oauth2PermissionsManualID(ri int) string {
 	return fmt.Sprintf(`
-resource "azuread_application" "tests" {
+resource "azuread_application" "test" {
   name = "acctest-APP-%[1]d"
 
   oauth2_permissions {
@@ -989,27 +889,27 @@ resource "azuread_application" "tests" {
 `, ri)
 }
 
-func testAccADApplication_oauth2PermissionsEmpty(ri int) string {
+func testAccApplication_oauth2PermissionsEmpty(ri int) string {
 	return fmt.Sprintf(`
-resource "azuread_application" "tests" {
+resource "azuread_application" "test" {
   name               = "acctest-APP-%[1]d"
   oauth2_permissions = []
 }
 `, ri)
 }
 
-func testAccADApplication_native(ri int) string {
+func testAccApplication_native(ri int) string {
 	return fmt.Sprintf(`
-resource "azuread_application" "tests" {
+resource "azuread_application" "test" {
   name = "acctest-APP-%[1]d"
   type = "native"
 }
 `, ri)
 }
 
-func testAccADApplication_nativeReplyUrls(ri int) string {
+func testAccApplication_nativeReplyUrls(ri int) string {
 	return fmt.Sprintf(`
-resource "azuread_application" "tests" {
+resource "azuread_application" "test" {
   name       = "acctest-APP-%[1]d"
   type       = "native"
   reply_urls = ["urn:ietf:wg:oauth:2.0:oob"]
@@ -1017,9 +917,9 @@ resource "azuread_application" "tests" {
 `, ri)
 }
 
-func testAccADApplication_native_app_does_not_allow_identifier_uris(ri int) string {
+func testAccApplication_native_app_does_not_allow_identifier_uris(ri int) string {
 	return fmt.Sprintf(`
-resource "azuread_application" "tests" {
+resource "azuread_application" "test" {
   name            = "acctest-APP-%[1]d"
   identifier_uris = ["http://%[1]d.hashicorptest.com"]
   type            = "native"
@@ -1027,20 +927,20 @@ resource "azuread_application" "tests" {
 `, ri)
 }
 
-func testAccADApplication_duplicateName(ri int) string {
+func testAccApplication_duplicateName(ri int) string {
 	return fmt.Sprintf(`
 %s
 
 resource "azuread_application" "duplicate" {
-  name                    = azuread_application.tests.name
+  name                    = azuread_application.test.name
   prevent_duplicate_names = true
 }
-`, testAccADApplication_basic(ri))
+`, testAccApplication_basic(ri))
 }
 
-func testAccADApplication_duplicateAppRolesOauth2PermissionsValues(ri int) string {
+func testAccApplication_duplicateAppRolesOauth2PermissionsValues(ri int) string {
 	return fmt.Sprintf(`
-resource "azuread_application" "tests" {
+resource "azuread_application" "test" {
   name = "acctest-APP-%[1]d"
 
   app_role {

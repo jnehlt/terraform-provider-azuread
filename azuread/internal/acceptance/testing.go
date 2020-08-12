@@ -1,11 +1,14 @@
 package acceptance
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"regexp"
 	"testing"
 
+	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/hashicorp/go-azure-helpers/authentication"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 )
@@ -28,6 +31,20 @@ func PreCheck(t *testing.T) {
 			t.Fatalf("`%s` must be set for acceptance tests!", variable)
 		}
 	}
+}
+
+func EnvironmentName() string {
+	envName, exists := os.LookupEnv("ARM_ENVIRONMENT")
+	if !exists {
+		envName = "public"
+	}
+	return envName
+}
+
+func Environment() (*azure.Environment, error) {
+	envName := EnvironmentName()
+	metadataURL := os.Getenv("ARM_METADATA_URL")
+	return authentication.AzureEnvironmentByNameFromEndpoint(context.TODO(), metadataURL, envName)
 }
 
 func RequiresImportError(resourceName string) *regexp.Regexp {

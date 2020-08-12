@@ -23,7 +23,7 @@ func TestAccAzureADUser_basic(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccADUser_basic(id, pw),
@@ -57,7 +57,7 @@ func TestAccAzureADUser_complete(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:     func() { acceptance.PreCheck(t) },
 		Providers:    acceptance.SupportedProviders,
-		CheckDestroy: testCheckADApplicationDestroy,
+		CheckDestroy: testCheckApplicationDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccADUser_complete(id, pw),
