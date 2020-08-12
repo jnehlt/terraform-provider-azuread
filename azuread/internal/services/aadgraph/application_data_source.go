@@ -236,11 +236,11 @@ func dataApplicationRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("Error setting `reply_urls`: %+v", err)
 	}
 
-	if err := d.Set("required_resource_access", flattenADApplicationRequiredResourceAccess(app.RequiredResourceAccess)); err != nil {
+	if err := d.Set("required_resource_access", flattenApplicationRequiredResourceAccess(app.RequiredResourceAccess)); err != nil {
 		return fmt.Errorf("Error setting `required_resource_access`: %+v", err)
 	}
 
-	if err := d.Set("optional_claims", flattenADApplicationOptionalClaims(app.OptionalClaims)); err != nil {
+	if err := d.Set("optional_claims", flattenApplicationOptionalClaims(app.OptionalClaims)); err != nil {
 		return fmt.Errorf("setting `optional_claims`: %+v", err)
 	}
 

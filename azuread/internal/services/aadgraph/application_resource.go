@@ -1,12 +1,15 @@
 package aadgraph
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/google/uuid"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/hashcode"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 
@@ -107,8 +110,24 @@ func ResourceApplication() *schema.Resource {
 			},
 
 			"app_role": {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
+				Computed: true,
+				Set: func(v interface{}) int {
+					var buf bytes.Buffer
+					m := v.(map[string]interface{})
+					ty := m["allowed_member_types"].(*schema.Set).List()
+					t := make([]string, len(ty))
+					for i, v := range ty {
+						t[i] = v.(string)
+					}
+					buf.WriteString(fmt.Sprintf("%s:", strings.Join(t, ",")))
+					buf.WriteString(fmt.Sprintf("%s:", m["description"].(string)))
+					buf.WriteString(fmt.Sprintf("%s:", m["display_name"].(string)))
+					buf.WriteString(fmt.Sprintf("%t:", m["is_enabled"].(bool)))
+					buf.WriteString(fmt.Sprintf("%s:", m["value"].(string)))
+					return hashcode.String(buf.String())
+				},
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"id": {
@@ -230,10 +249,22 @@ func ResourceApplication() *schema.Resource {
 			},
 
 			"oauth2_permissions": {
-				Type:       schema.TypeList,
+				Type:       schema.TypeSet,
 				Optional:   true,
 				Computed:   true,
 				ConfigMode: schema.SchemaConfigModeAttr,
+				Set: func(v interface{}) int {
+					var buf bytes.Buffer
+					m := v.(map[string]interface{})
+					buf.WriteString(fmt.Sprintf("%s:", m["admin_consent_description"].(string)))
+					buf.WriteString(fmt.Sprintf("%s:", m["admin_consent_display_name"].(string)))
+					buf.WriteString(fmt.Sprintf("%t:", m["is_enabled"].(bool)))
+					buf.WriteString(fmt.Sprintf("%s:", m["type"].(string)))
+					buf.WriteString(fmt.Sprintf("%s:", m["user_consent_description"].(string)))
+					buf.WriteString(fmt.Sprintf("%s:", m["user_consent_display_name"].(string)))
+					buf.WriteString(fmt.Sprintf("%s:", m["value"].(string)))
+					return hashcode.String(buf.String())
+				},
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"admin_consent_description": {
@@ -313,7 +344,7 @@ func resourceApplicationCreate(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
-	if err := adApplicationValidateRolesScopes(d.Get("app_role"), d.Get("oauth2_permissions")); err != nil {
+	if err := applicationValidateRolesScopes(d.Get("app_role"), d.Get("oauth2_permissions")); err != nil {
 		return err
 	}
 
@@ -333,8 +364,8 @@ func resourceApplicationCreate(d *schema.ResourceData, meta interface{}) error {
 		IdentifierUris:          tf.ExpandStringSlicePtr(identUrls.([]interface{})),
 		ReplyUrls:               tf.ExpandStringSlicePtr(d.Get("reply_urls").(*schema.Set).List()),
 		AvailableToOtherTenants: p.BoolI(d.Get("available_to_other_tenants")),
-		RequiredResourceAccess:  expandADApplicationRequiredResourceAccess(d),
-		OptionalClaims:          expandADApplicationOptionalClaims(d),
+		RequiredResourceAccess:  expandApplicationRequiredResourceAccess(d),
+		OptionalClaims:          expandApplicationOptionalClaims(d),
 	}
 
 	if v, ok := d.GetOk("homepage"); ok {
@@ -393,7 +424,7 @@ func resourceApplicationCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	// to use an empty value we need to patch the resource
-	appRoles := expandADApplicationAppRoles(d.Get("app_role"))
+	appRoles := expandApplicationAppRoles(d.Get("app_role"))
 	if appRoles != nil {
 		properties2 := graphrbac.ApplicationUpdateParameters{
 			AppRoles: appRoles,
@@ -407,7 +438,7 @@ func resourceApplicationCreate(d *schema.ResourceData, meta interface{}) error {
 	// zadd owners, there is a default owner that we must account so use this shared function
 	if v, ok := d.GetOk("owners"); ok {
 		members := *tf.ExpandStringSlicePtr(v.(*schema.Set).List())
-		if err := adApplicationSetOwnersTo(client, ctx, *app.ObjectID, members); err != nil {
+		if err := applicationSetOwnersTo(client, ctx, *app.ObjectID, members); err != nil {
 			return err
 		}
 	}
@@ -430,7 +461,7 @@ func resourceApplicationUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
-	if err := adApplicationValidateRolesScopes(d.Get("app_role"), d.Get("oauth2_permissions")); err != nil {
+	if err := applicationValidateRolesScopes(d.Get("app_role"), d.Get("oauth2_permissions")); err != nil {
 		return err
 	}
 
@@ -469,11 +500,11 @@ func resourceApplicationUpdate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if d.HasChange("required_resource_access") {
-		properties.RequiredResourceAccess = expandADApplicationRequiredResourceAccess(d)
+		properties.RequiredResourceAccess = expandApplicationRequiredResourceAccess(d)
 	}
 
 	if d.HasChange("optional_claims") {
-		properties.OptionalClaims = expandADApplicationOptionalClaims(d)
+		properties.OptionalClaims = expandApplicationOptionalClaims(d)
 	}
 
 	if d.HasChange("oauth2_permissions") {
@@ -499,7 +530,7 @@ func resourceApplicationUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 
 		// now we can set the new state of the permission
-		properties.Oauth2Permissions = expandADApplicationOAuth2Permissions(d.Get("oauth2_permissions"))
+		properties.Oauth2Permissions = expandApplicationOAuth2Permissions(d.Get("oauth2_permissions"))
 	}
 
 	if d.HasChange("app_role") {
@@ -525,7 +556,7 @@ func resourceApplicationUpdate(d *schema.ResourceData, meta interface{}) error {
 		}
 
 		// now we can set the new state of the app role
-		properties.AppRoles = expandADApplicationAppRoles(d.Get("app_role"))
+		properties.AppRoles = expandApplicationAppRoles(d.Get("app_role"))
 	}
 
 	if d.HasChange("group_membership_claims") {
@@ -551,7 +582,7 @@ func resourceApplicationUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOkExists("owners"); ok && d.HasChange("owners") {
 		desiredOwners := *tf.ExpandStringSlicePtr(v.(*schema.Set).List())
-		if err := adApplicationSetOwnersTo(client, ctx, d.Id(), desiredOwners); err != nil {
+		if err := applicationSetOwnersTo(client, ctx, d.Id(), desiredOwners); err != nil {
 			return err
 		}
 	}
@@ -601,11 +632,11 @@ func resourceApplicationRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("setting `reply_urls`: %+v", err)
 	}
 
-	if err := d.Set("required_resource_access", flattenADApplicationRequiredResourceAccess(app.RequiredResourceAccess)); err != nil {
+	if err := d.Set("required_resource_access", flattenApplicationRequiredResourceAccess(app.RequiredResourceAccess)); err != nil {
 		return fmt.Errorf("setting `required_resource_access`: %+v", err)
 	}
 
-	if err := d.Set("optional_claims", flattenADApplicationOptionalClaims(app.OptionalClaims)); err != nil {
+	if err := d.Set("optional_claims", flattenApplicationOptionalClaims(app.OptionalClaims)); err != nil {
 		return fmt.Errorf("setting `optional_claims`: %+v", err)
 	}
 
@@ -659,7 +690,7 @@ func resourceApplicationDelete(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func expandADApplicationRequiredResourceAccess(d *schema.ResourceData) *[]graphrbac.RequiredResourceAccess {
+func expandApplicationRequiredResourceAccess(d *schema.ResourceData) *[]graphrbac.RequiredResourceAccess {
 	requiredResourcesAccesses := d.Get("required_resource_access").(*schema.Set).List()
 	result := make([]graphrbac.RequiredResourceAccess, 0)
 
@@ -670,7 +701,7 @@ func expandADApplicationRequiredResourceAccess(d *schema.ResourceData) *[]graphr
 		result = append(result,
 			graphrbac.RequiredResourceAccess{
 				ResourceAppID: &resource_app_id,
-				ResourceAccess: expandADApplicationResourceAccess(
+				ResourceAccess: expandApplicationResourceAccess(
 					requiredResourceAccess["resource_access"].([]interface{}),
 				),
 			},
@@ -679,7 +710,7 @@ func expandADApplicationRequiredResourceAccess(d *schema.ResourceData) *[]graphr
 	return &result
 }
 
-func expandADApplicationResourceAccess(in []interface{}) *[]graphrbac.ResourceAccess {
+func expandApplicationResourceAccess(in []interface{}) *[]graphrbac.ResourceAccess {
 	resourceAccesses := make([]graphrbac.ResourceAccess, 0, len(in))
 	for _, resource_access_raw := range in {
 		resource_access := resource_access_raw.(map[string]interface{})
@@ -698,7 +729,7 @@ func expandADApplicationResourceAccess(in []interface{}) *[]graphrbac.ResourceAc
 	return &resourceAccesses
 }
 
-func flattenADApplicationRequiredResourceAccess(in *[]graphrbac.RequiredResourceAccess) []map[string]interface{} {
+func flattenApplicationRequiredResourceAccess(in *[]graphrbac.RequiredResourceAccess) []map[string]interface{} {
 	if in == nil {
 		return []map[string]interface{}{}
 	}
@@ -710,7 +741,7 @@ func flattenADApplicationRequiredResourceAccess(in *[]graphrbac.RequiredResource
 			resource["resource_app_id"] = *requiredResourceAccess.ResourceAppID
 		}
 
-		resource["resource_access"] = flattenADApplicationResourceAccess(requiredResourceAccess.ResourceAccess)
+		resource["resource_access"] = flattenApplicationResourceAccess(requiredResourceAccess.ResourceAccess)
 
 		result = append(result, resource)
 	}
@@ -718,7 +749,7 @@ func flattenADApplicationRequiredResourceAccess(in *[]graphrbac.RequiredResource
 	return result
 }
 
-func flattenADApplicationResourceAccess(in *[]graphrbac.ResourceAccess) []interface{} {
+func flattenApplicationResourceAccess(in *[]graphrbac.ResourceAccess) []interface{} {
 	if in == nil {
 		return []interface{}{}
 	}
@@ -738,20 +769,20 @@ func flattenADApplicationResourceAccess(in *[]graphrbac.ResourceAccess) []interf
 	return accesses
 }
 
-func expandADApplicationOptionalClaims(d *schema.ResourceData) *graphrbac.OptionalClaims {
+func expandApplicationOptionalClaims(d *schema.ResourceData) *graphrbac.OptionalClaims {
 	result := graphrbac.OptionalClaims{}
 
 	for _, raw := range d.Get("optional_claims").([]interface{}) {
 		optionalClaims := raw.(map[string]interface{})
-		result.AccessToken = expandADApplicationOptionalClaim(optionalClaims["access_token"].([]interface{}))
-		result.IDToken = expandADApplicationOptionalClaim(optionalClaims["id_token"].([]interface{}))
+		result.AccessToken = expandApplicationOptionalClaim(optionalClaims["access_token"].([]interface{}))
+		result.IDToken = expandApplicationOptionalClaim(optionalClaims["id_token"].([]interface{}))
 		// TODO: enable when https://github.com/Azure/azure-sdk-for-go/issues/9714 resolved
-		//result.SamlToken = expandADApplicationOptionalClaim(optionalClaims["saml_token"].([]interface{}))
+		//result.SamlToken = expandApplicationOptionalClaim(optionalClaims["saml_token"].([]interface{}))
 	}
 	return &result
 }
 
-func expandADApplicationOptionalClaim(in []interface{}) *[]graphrbac.OptionalClaim {
+func expandApplicationOptionalClaim(in []interface{}) *[]graphrbac.OptionalClaim {
 	optionalClaims := make([]graphrbac.OptionalClaim, 0, len(in))
 	for _, optionalClaimRaw := range in {
 		optionalClaim := optionalClaimRaw.(map[string]interface{})
@@ -782,7 +813,7 @@ func expandADApplicationOptionalClaim(in []interface{}) *[]graphrbac.OptionalCla
 	return &optionalClaims
 }
 
-func flattenADApplicationOptionalClaims(in *graphrbac.OptionalClaims) interface{} {
+func flattenApplicationOptionalClaims(in *graphrbac.OptionalClaims) interface{} {
 	var result []map[string]interface{}
 
 	if in == nil {
@@ -790,14 +821,14 @@ func flattenADApplicationOptionalClaims(in *graphrbac.OptionalClaims) interface{
 	}
 
 	optionalClaims := make(map[string]interface{})
-	if claims := flattenADApplicationOptionalClaimsList(in.AccessToken); len(claims) > 0 {
+	if claims := flattenApplicationOptionalClaimsList(in.AccessToken); len(claims) > 0 {
 		optionalClaims["access_token"] = claims
 	}
-	if claims := flattenADApplicationOptionalClaimsList(in.IDToken); len(claims) > 0 {
+	if claims := flattenApplicationOptionalClaimsList(in.IDToken); len(claims) > 0 {
 		optionalClaims["id_token"] = claims
 	}
 	// TODO: enable when https://github.com/Azure/azure-sdk-for-go/issues/9714 resolved
-	//if claims := flattenADApplicationOptionalClaimsList(in.SamlToken); len(claims) > 0 {
+	//if claims := flattenApplicationOptionalClaimsList(in.SamlToken); len(claims) > 0 {
 	//	optionalClaims["saml_token"] = claims
 	//}
 	if len(optionalClaims) == 0 {
@@ -807,7 +838,7 @@ func flattenADApplicationOptionalClaims(in *graphrbac.OptionalClaims) interface{
 	return result
 }
 
-func flattenADApplicationOptionalClaimsList(in *[]graphrbac.OptionalClaim) []interface{} {
+func flattenApplicationOptionalClaimsList(in *[]graphrbac.OptionalClaim) []interface{} {
 	if in == nil {
 		return []interface{}{}
 	}
@@ -837,8 +868,8 @@ func flattenADApplicationOptionalClaimsList(in *[]graphrbac.OptionalClaim) []int
 	return optionalClaims
 }
 
-func expandADApplicationAppRoles(i interface{}) *[]graphrbac.AppRole {
-	input := i.([]interface{})
+func expandApplicationAppRoles(i interface{}) *[]graphrbac.AppRole {
+	input := i.(*schema.Set).List()
 	if len(input) == 0 {
 		return nil
 	}
@@ -881,8 +912,8 @@ func expandADApplicationAppRoles(i interface{}) *[]graphrbac.AppRole {
 	return &output
 }
 
-func expandADApplicationOAuth2Permissions(i interface{}) *[]graphrbac.OAuth2Permission {
-	input := i.([]interface{})
+func expandApplicationOAuth2Permissions(i interface{}) *[]graphrbac.OAuth2Permission {
+	input := i.(*schema.Set).List()
 	result := make([]graphrbac.OAuth2Permission, 0)
 
 	for _, raw := range input {
@@ -917,7 +948,7 @@ func expandADApplicationOAuth2Permissions(i interface{}) *[]graphrbac.OAuth2Perm
 	return &result
 }
 
-func adApplicationSetOwnersTo(client graphrbac.ApplicationsClient, ctx context.Context, id string, desiredOwners []string) error {
+func applicationSetOwnersTo(client graphrbac.ApplicationsClient, ctx context.Context, id string, desiredOwners []string) error {
 	existingOwners, err := graph.ApplicationAllOwners(client, ctx, id)
 	if err != nil {
 		return err
@@ -943,11 +974,11 @@ func adApplicationSetOwnersTo(client graphrbac.ApplicationsClient, ctx context.C
 	return nil
 }
 
-func adApplicationValidateRolesScopes(appRoles, oauth2Permissions interface{}) error {
+func applicationValidateRolesScopes(appRoles, oauth2Permissions interface{}) error {
 	var values []string
 
 	if appRoles != nil {
-		for _, roleRaw := range appRoles.([]interface{}) {
+		for _, roleRaw := range appRoles.(*schema.Set).List() {
 			role := roleRaw.(map[string]interface{})
 			if val := role["value"].(string); val != "" {
 				values = append(values, val)
@@ -956,7 +987,7 @@ func adApplicationValidateRolesScopes(appRoles, oauth2Permissions interface{}) e
 	}
 
 	if oauth2Permissions != nil {
-		for _, scopeRaw := range oauth2Permissions.([]interface{}) {
+		for _, scopeRaw := range oauth2Permissions.(*schema.Set).List() {
 			scope := scopeRaw.(map[string]interface{})
 			if val := scope["value"].(string); val != "" {
 				values = append(values, val)
